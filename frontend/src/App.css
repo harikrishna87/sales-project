@@ -1,0 +1,171 @@
+.landing-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.role-card {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
+  border-radius: 24px !important;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.role-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4) !important;
+}
+
+.student-card:hover {
+  border-color: rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.3) !important;
+}
+
+.teacher-card:hover {
+  border-color: rgba(16, 185, 129, 0.8) !important;
+  box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3) !important;
+}
+
+.role-card .ant-card-body {
+  padding: 32px !important;
+}
+
+.role-card h3 {
+  color: white !important;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-icon {
+  background: rgba(59, 130, 246, 0.3);
+  color: #818cf8;
+}
+
+.teacher-icon {
+  background: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.arrow-icon {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover .arrow-icon {
+  transform: translateX(8px);
+}
+
+.form-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.student-form-bg {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 50%, #f0f9ff 100%);
+}
+
+.teacher-form-bg {
+  background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 50%, #f0fdf4 100%);
+}
+
+.form-card {
+  border-radius: 24px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+  background: white !important;
+}
+
+.student-form-card {
+  border: 2px solid #bfdbfe !important;
+}
+
+.teacher-form-card {
+  border: 2px solid #a7f3d0 !important;
+}
+
+.student-theme-color {
+  color: #2563eb !important;
+}
+
+.teacher-theme-color {
+  color: #059669 !important;
+}
+
+.student-theme-icon {
+  color: #3b82f6 !important;
+}
+
+.teacher-theme-icon {
+  color: #10b981 !important;
+}
+
+.student-terms-card {
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+.teacher-terms-card {
+  background: #f0fdf4 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.student-submit-btn,
+.student-next-btn {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+.student-submit-btn:hover,
+.student-next-btn:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+.teacher-submit-btn,
+.teacher-next-btn {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+}
+
+.teacher-submit-btn:hover,
+.teacher-next-btn:hover {
+  background: #059669 !important;
+  border-color: #059669 !important;
+}
+
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+.teacher-form-card .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+}
+
+@media (max-width: 768px) {
+  .landing-container {
+    padding: 20px;
+  }
+  
+  .role-card .ant-card-body {
+    padding: 20px !important;
+  }
+}
