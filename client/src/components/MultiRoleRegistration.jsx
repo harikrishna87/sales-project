@@ -1,6 +1,27 @@
 import React, { useState } from "react";
-import { UserOutlined, TeamOutlined, ArrowRightOutlined, ArrowLeftOutlined, CheckCircleOutlined, LoadingOutlined } from "@ant-design/icons";
-import { Form, Input, Button, Card, Progress, Select, Checkbox, Row, Col, Typography, message, Space, Spin } from "antd";
+import {
+  UserOutlined,
+  TeamOutlined,
+  ArrowRightOutlined,
+  ArrowLeftOutlined,
+  CheckCircleOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
+import {
+  Form,
+  Input,
+  Button,
+  Card,
+  Progress,
+  Select,
+  Checkbox,
+  Row,
+  Col,
+  Typography,
+  message,
+  Space,
+  Spin,
+} from "antd";
 import { studentAPI, teacherAPI } from "../services/api";
 
 const { Title, Text, Paragraph } = Typography;
@@ -15,7 +36,7 @@ const salesCourses = [
   "Negotiation & Closing Deals",
   "CRM Tools (Salesforce, HubSpot)",
   "Body Language & Communication",
-  "Customer Relationship Management"
+  "Customer Relationship Management",
 ];
 
 const craCourses = [
@@ -26,7 +47,7 @@ const craCourses = [
   "Regulatory Affairs",
   "Biostatistics Basics",
   "Medical Documentation",
-  "Research Ethics"
+  "Research Ethics",
 ];
 
 const studyStatuses = ["Intermediate", "Diploma", "UG", "PG", "BTech", "Other"];
@@ -60,7 +81,7 @@ const MultiRoleRegistration = () => {
     programInterest: "",
     salesSelections: [],
     craSelections: [],
-    agreeTerms: false
+    agreeTerms: false,
   });
 
   const [teacherData, setTeacherData] = useState({
@@ -82,14 +103,14 @@ const MultiRoleRegistration = () => {
     expectedHourlyRate: "",
     languages: [],
     bio: "",
-    agreeTerms: false
+    agreeTerms: false,
   });
 
   const studentSteps = [
     { id: 1, title: "Basic Details" },
     { id: 2, title: "Academic Details" },
     { id: 3, title: "Program Interests" },
-    { id: 4, title: "Review & Confirm" }
+    { id: 4, title: "Review & Confirm" },
   ];
 
   const teacherSteps = [
@@ -97,21 +118,30 @@ const MultiRoleRegistration = () => {
     { id: 2, title: "Professional Profile" },
     { id: 3, title: "Teaching Details" },
     { id: 4, title: "Languages & Bio" },
-    { id: 5, title: "Review & Confirm" }
+    { id: 5, title: "Review & Confirm" },
   ];
 
+  const [studentEmailVerified, setStudentEmailVerified] = useState(false);
+  const [studentShowOtp, setStudentShowOtp] = useState(false);
+  const [studentOtp, setStudentOtp] = useState(Array(6).fill(""));
+  const [studentOtpLoading, setStudentOtpLoading] = useState(false);
+  const [studentResendLoading, setStudentResendLoading] = useState(false);
+
+  const [teacherEmailVerified, setTeacherEmailVerified] = useState(false);
+  const [teacherShowOtp, setTeacherShowOtp] = useState(false);
+  const [teacherOtp, setTeacherOtp] = useState(Array(6).fill(""));
+  const [teacherOtpLoading, setTeacherOtpLoading] = useState(false);
+  const [teacherResendLoading, setTeacherResendLoading] = useState(false);
+
   const calcProgress = (step, totalSteps) => Math.round(((step - 1) / (totalSteps - 1)) * 100);
-
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
   const validatePassword = (pwd) => ({
     length: pwd.length >= 8,
     uppercase: /[A-Z]/.test(pwd),
     lowercase: /[a-z]/.test(pwd),
     number: /[0-9]/.test(pwd),
-    special: /[!@#$%^&*]/.test(pwd)
+    special: /[!@#$%^&*]/.test(pwd),
   });
-
   const validateUrl = (url) => {
     if (!url) return true;
     try {
@@ -121,8 +151,167 @@ const MultiRoleRegistration = () => {
       return false;
     }
   };
-
   const validatePhone = (phone) => /^[0-9]{8,15}$/.test(phone);
+
+  const handleStudentOtpChange = (e, index) => {
+    const val = e.target.value.slice(0, 1);
+    if (!/^\d?$/.test(val)) return;
+    const next = [...studentOtp];
+    next[index] = val;
+    setStudentOtp(next);
+    if (val && index < 5) {
+      document.getElementById(`student-otp-${index + 1}`)?.focus();
+    }
+  };
+
+  const handleStudentSendOtp = async () => {
+    const values = await studentForm.validateFields(["email", "password", "confirmPassword"]);
+    
+    if (!validateEmail(values.email)) {
+      message.error("Please enter a valid email");
+      return;
+    }
+
+    const pwdChecks = validatePassword(values.password);
+    if (!Object.values(pwdChecks).every(Boolean)) {
+      message.error("Password must be 8+ chars with uppercase, lowercase, number & special char");
+      return;
+    }
+
+    if (values.password !== values.confirmPassword) {
+      message.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      setStudentOtpLoading(true);
+      const response = await studentAPI.sendOtp({ email: values.email, password: values.password });
+      if (response.data.success) {
+        setStudentShowOtp(true);
+        setStudentOtp(Array(6).fill(""));
+        setStudentData({ ...studentData, ...values });
+        message.success("OTP sent to your email!");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setStudentOtpLoading(false);
+    }
+  };
+
+  const handleStudentVerifyOtp = async () => {
+    const code = studentOtp.join("");
+    if (code.length !== 6) {
+      message.error("Enter full 6-digit OTP");
+      return;
+    }
+    try {
+      setStudentOtpLoading(true);
+      const response = await studentAPI.verifyOtp({ email: studentData.email, otp: code });
+      if (response.data.success) {
+        setStudentEmailVerified(true);
+        setStudentShowOtp(false);
+        message.success("Email verified successfully!");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "Invalid or expired OTP");
+    } finally {
+      setStudentOtpLoading(false);
+    }
+  };
+
+  const handleStudentResendOtp = async () => {
+    try {
+      setStudentResendLoading(true);
+      await studentAPI.sendOtp({ email: studentData.email, password: studentData.password });
+      message.success("OTP resent successfully!");
+      setStudentOtp(Array(6).fill(""));
+    } catch (error) {
+      message.error("Failed to resend OTP");
+    } finally {
+      setStudentResendLoading(false);
+    }
+  };
+
+  const handleTeacherOtpChange = (e, index) => {
+    const val = e.target.value.slice(0, 1);
+    if (!/^\d?$/.test(val)) return;
+    const next = [...teacherOtp];
+    next[index] = val;
+    setTeacherOtp(next);
+    if (val && index < 5) {
+      document.getElementById(`teacher-otp-${index + 1}`)?.focus();
+    }
+  };
+
+  const handleTeacherSendOtp = async () => {
+    const values = await teacherForm.validateFields(["email", "password", "confirmPassword"]);
+    
+    if (!validateEmail(values.email)) {
+      message.error("Please enter a valid email");
+      return;
+    }
+
+    const pwdChecks = validatePassword(values.password);
+    if (!Object.values(pwdChecks).every(Boolean)) {
+      message.error("Password must be 8+ chars with uppercase, lowercase, number & special char");
+      return;
+    }
+
+    if (values.password !== values.confirmPassword) {
+      message.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      setTeacherOtpLoading(true);
+      const response = await teacherAPI.sendOtp({ email: values.email, password: values.password });
+      if (response.data.success) {
+        setTeacherShowOtp(true);
+        setTeacherOtp(Array(6).fill(""));
+        setTeacherData({ ...teacherData, ...values });
+        message.success("OTP sent to your email!");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setTeacherOtpLoading(false);
+    }
+  };
+
+  const handleTeacherVerifyOtp = async () => {
+    const code = teacherOtp.join("");
+    if (code.length !== 6) {
+      message.error("Enter full 6-digit OTP");
+      return;
+    }
+    try {
+      setTeacherOtpLoading(true);
+      const response = await teacherAPI.verifyOtp({ email: teacherData.email, otp: code });
+      if (response.data.success) {
+        setTeacherEmailVerified(true);
+        setTeacherShowOtp(false);
+        message.success("Email verified successfully!");
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "Invalid or expired OTP");
+    } finally {
+      setTeacherOtpLoading(false);
+    }
+  };
+
+  const handleTeacherResendOtp = async () => {
+    try {
+      setTeacherResendLoading(true);
+      await teacherAPI.sendOtp({ email: teacherData.email, password: teacherData.password });
+      message.success("OTP resent successfully!");
+      setTeacherOtp(Array(6).fill(""));
+    } catch (error) {
+      message.error("Failed to resend OTP");
+    } finally {
+      setTeacherResendLoading(false);
+    }
+  };
 
   const onStudentNext = async () => {
     try {
@@ -157,7 +346,7 @@ const MultiRoleRegistration = () => {
       if (studentStep < 4) {
         setStudentStep(studentStep + 1);
       }
-    } catch (error) {
+    } catch {
       message.error("Please fill all required fields correctly");
     }
   };
@@ -200,14 +389,18 @@ const MultiRoleRegistration = () => {
       if (teacherStep < 5) {
         setTeacherStep(teacherStep + 1);
       }
-    } catch (error) {
+    } catch {
       message.error("Please fill all required fields correctly");
     }
   };
 
   const onStudentSubmit = async () => {
+    if (!studentEmailVerified) {
+      message.error("Please verify your email before submitting");
+      return;
+    }
     try {
-      const values = await studentForm.validateFields();
+      await studentForm.validateFields();
       if (!studentData.agreeTerms) {
         message.error("You must accept terms and conditions");
         return;
@@ -230,23 +423,23 @@ const MultiRoleRegistration = () => {
         craSelections: studentData.craSelections || [],
         agreeTerms: studentData.agreeTerms
       };
-
       const response = await studentAPI.register(payload);
       if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
-        message.success("Student registration successful!");
+        message.success("Student registration completed successfully!");
         setTimeout(() => setCurrentView("success"), 1000);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Registration failed. Please try again.";
-      message.error(errorMessage);
+      message.error(error.response?.data?.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const onTeacherSubmit = async () => {
+    if (!teacherEmailVerified) {
+      message.error("Please verify your email before submitting");
+      return;
+    }
     try {
       if (!teacherData.agreeTerms) {
         message.error("You must accept terms and conditions");
@@ -274,17 +467,13 @@ const MultiRoleRegistration = () => {
         bio: teacherData.bio,
         agreeTerms: teacherData.agreeTerms
       };
-
       const response = await teacherAPI.register(payload);
       if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.data));
-        message.success("Teacher registration successful!");
+        message.success("Teacher registration completed successfully!");
         setTimeout(() => setCurrentView("success"), 1000);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Registration failed. Please try again.";
-      message.error(errorMessage);
+      message.error(error.response?.data?.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -302,13 +491,13 @@ const MultiRoleRegistration = () => {
               <Input size="large" placeholder="Enter last name" />
             </Form.Item>
             <Form.Item name="email" label="Email" rules={[{ required: true, message: "Please enter email" }, { type: "email", message: "Please enter valid email" }]}>
-              <Input size="large" placeholder="Enter email" />
+              <Input size="large" placeholder="Enter email" disabled={studentShowOtp || studentEmailVerified} />
             </Form.Item>
             <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter password" }]} extra="Use 8+ chars with uppercase, lowercase, number and special character">
-              <Input.Password size="large" placeholder="Enter password" />
+              <Input.Password size="large" placeholder="Enter password" disabled={studentShowOtp || studentEmailVerified} />
             </Form.Item>
             <Form.Item name="confirmPassword" label="Confirm Password" rules={[{ required: true, message: "Please confirm password" }]}>
-              <Input.Password size="large" placeholder="Confirm password" />
+              <Input.Password size="large" placeholder="Confirm password" disabled={studentShowOtp || studentEmailVerified} />
             </Form.Item>
           </Space>
         );
@@ -321,9 +510,7 @@ const MultiRoleRegistration = () => {
             </Form.Item>
             <Form.Item name="currentStatus" label="Current Studying Status" rules={[{ required: true, message: "Please select status" }]}>
               <Select size="large" placeholder="Select status">
-                {studyStatuses.map((s) => (
-                  <Option key={s} value={s}>{s}</Option>
-                ))}
+                {studyStatuses.map((s) => (<Option key={s} value={s}>{s}</Option>))}
               </Select>
             </Form.Item>
             <Form.Item noStyle shouldUpdate={(prev, curr) => prev.currentStatus !== curr.currentStatus}>
@@ -333,18 +520,14 @@ const MultiRoleRegistration = () => {
                     <Col span={12}>
                       <Form.Item name="branch" label="Branch" rules={[{ required: true, message: "Please select branch" }]}>
                         <Select size="large" placeholder="Select branch">
-                          {branches.map((b) => (
-                            <Option key={b} value={b}>{b}</Option>
-                          ))}
+                          {branches.map((b) => (<Option key={b} value={b}>{b}</Option>))}
                         </Select>
                       </Form.Item>
                     </Col>
                     <Col span={12}>
                       <Form.Item name="studyYear" label="Year of Study" rules={[{ required: true, message: "Please select year" }]}>
                         <Select size="large" placeholder="Select year">
-                          {yearsOfStudy.map((y) => (
-                            <Option key={y} value={y}>{y}</Option>
-                          ))}
+                          {yearsOfStudy.map((y) => (<Option key={y} value={y}>{y}</Option>))}
                         </Select>
                       </Form.Item>
                     </Col>
@@ -381,9 +564,7 @@ const MultiRoleRegistration = () => {
                         <Checkbox.Group style={{ width: "100%" }}>
                           <Row gutter={[8, 8]}>
                             {salesCourses.map((course) => (
-                              <Col span={12} key={course}>
-                                <Checkbox value={course}>{course}</Checkbox>
-                              </Col>
+                              <Col span={12} key={course}><Checkbox value={course}>{course}</Checkbox></Col>
                             ))}
                           </Row>
                         </Checkbox.Group>
@@ -394,9 +575,7 @@ const MultiRoleRegistration = () => {
                         <Checkbox.Group style={{ width: "100%" }}>
                           <Row gutter={[8, 8]}>
                             {craCourses.map((course) => (
-                              <Col span={12} key={course}>
-                                <Checkbox value={course}>{course}</Checkbox>
-                              </Col>
+                              <Col span={12} key={course}><Checkbox value={course}>{course}</Checkbox></Col>
                             ))}
                           </Row>
                         </Checkbox.Group>
@@ -426,6 +605,27 @@ const MultiRoleRegistration = () => {
                 <Col span={24}><Text strong>Program:</Text> <Text>{studentData.programInterest}</Text></Col>
                 <Col span={24}><Text strong>Sales Courses:</Text> <Text>{studentData.salesSelections?.length ? studentData.salesSelections.join(", ") : "-"}</Text></Col>
                 <Col span={24}><Text strong>CRA Courses:</Text> <Text>{studentData.craSelections?.length ? studentData.craSelections.join(", ") : "-"}</Text></Col>
+                <Col span={24}><Text strong>Email verification: </Text><Text type={studentEmailVerified ? "success" : "warning"}>{studentEmailVerified ? "Verified ✅" : "Not verified"}</Text></Col>
+              </Row>
+              <Row style={{ marginTop: 12 }}>
+                <Col span={24}>
+                  {!studentEmailVerified && !studentShowOtp && (
+                    <Button type="primary" onClick={handleStudentSendOtp} loading={studentOtpLoading}>Send OTP</Button>
+                  )}
+                  {studentShowOtp && !studentEmailVerified && (
+                    <>
+                      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
+                        {studentOtp.map((digit, i) => (
+                          <Input key={i} id={`student-otp-${i}`} value={digit} onChange={(e) => handleStudentOtpChange(e, i)} maxLength={1} style={{ width: 40, textAlign: "center" }} />
+                        ))}
+                      </div>
+                      <Space>
+                        <Button type="primary" onClick={handleStudentVerifyOtp} loading={studentOtpLoading}>Verify</Button>
+                        <Button onClick={handleStudentResendOtp} loading={studentResendLoading}>Resend OTP</Button>
+                      </Space>
+                    </>
+                  )}
+                </Col>
               </Row>
             </div>
             <Card size="small" className="student-terms-card">
@@ -438,7 +638,7 @@ const MultiRoleRegistration = () => {
                 I have read and agree to the terms and conditions <Text type="danger">*</Text>
               </Checkbox>
             </Form.Item>
-            <Button type="primary" size="large" block icon={loading ? <LoadingOutlined /> : <CheckCircleOutlined />} onClick={onStudentSubmit} loading={loading} className="student-submit-btn">
+            <Button type="primary" size="large" block icon={loading ? <LoadingOutlined /> : <CheckCircleOutlined />} onClick={onStudentSubmit} loading={loading} disabled={!studentEmailVerified} className="student-submit-btn">
               {loading ? "Registering..." : "Register as Student"}
             </Button>
           </Space>
@@ -461,13 +661,13 @@ const MultiRoleRegistration = () => {
               <Input size="large" placeholder="Enter last name" />
             </Form.Item>
             <Form.Item name="email" label="Email" rules={[{ required: true, message: "Please enter email" }, { type: "email", message: "Please enter valid email" }]}>
-              <Input size="large" placeholder="Enter email" />
+              <Input size="large" placeholder="Enter email" disabled={teacherShowOtp || teacherEmailVerified} />
             </Form.Item>
             <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter password" }]} extra="Use 8+ chars with uppercase, lowercase, number and special character">
-              <Input.Password size="large" placeholder="Enter password" />
+              <Input.Password size="large" placeholder="Enter password" disabled={teacherShowOtp || teacherEmailVerified} />
             </Form.Item>
             <Form.Item name="confirmPassword" label="Confirm Password" rules={[{ required: true, message: "Please confirm password" }]}>
-              <Input.Password size="large" placeholder="Confirm password" />
+              <Input.Password size="large" placeholder="Confirm password" disabled={teacherShowOtp || teacherEmailVerified} />
             </Form.Item>
           </Space>
         );
@@ -483,16 +683,12 @@ const MultiRoleRegistration = () => {
             </Form.Item>
             <Form.Item name="highestEducation" label="Highest Education" rules={[{ required: true, message: "Please select education" }]}>
               <Select size="large" placeholder="Select education">
-                {educationOptions.map((e) => (
-                  <Option key={e} value={e}>{e}</Option>
-                ))}
+                {educationOptions.map((e) => (<Option key={e} value={e}>{e}</Option>))}
               </Select>
             </Form.Item>
             <Form.Item name="experienceRange" label="Total Experience" rules={[{ required: true, message: "Please select experience" }]}>
               <Select size="large" placeholder="Select experience">
-                {experienceOptions.map((e) => (
-                  <Option key={e} value={e}>{e}</Option>
-                ))}
+                {experienceOptions.map((e) => (<Option key={e} value={e}>{e}</Option>))}
               </Select>
             </Form.Item>
             <Form.Item name="institution" label="Current / Last Institution" rules={[{ required: true, message: "Please enter institution" }]}>
@@ -542,9 +738,7 @@ const MultiRoleRegistration = () => {
               <Checkbox.Group style={{ width: "100%" }}>
                 <Row gutter={[8, 8]}>
                   {languagesOptions.map((lang) => (
-                    <Col span={12} key={lang}>
-                      <Checkbox value={lang}>{lang}</Checkbox>
-                    </Col>
+                    <Col span={12} key={lang}><Checkbox value={lang}>{lang}</Checkbox></Col>
                   ))}
                 </Row>
               </Checkbox.Group>
@@ -576,6 +770,27 @@ const MultiRoleRegistration = () => {
                 <Col span={24}><Text strong>Experience PDF:</Text> <Text>{teacherData.experiencePdfUrl || "-"}</Text></Col>
                 <Col span={24}><Text strong>Languages:</Text> <Text>{teacherData.languages?.length ? teacherData.languages.join(", ") : "-"}</Text></Col>
                 <Col span={24}><Text strong>Bio:</Text> <Text>{teacherData.bio || "-"}</Text></Col>
+                <Col span={24}><Text strong>Email verification: </Text><Text type={teacherEmailVerified ? "success" : "warning"}>{teacherEmailVerified ? "Verified ✅" : "Not verified"}</Text></Col>
+              </Row>
+              <Row style={{ marginTop: 12 }}>
+                <Col span={24}>
+                  {!teacherEmailVerified && !teacherShowOtp && (
+                    <Button type="primary" onClick={handleTeacherSendOtp} loading={teacherOtpLoading}>Send OTP</Button>
+                  )}
+                  {teacherShowOtp && !teacherEmailVerified && (
+                    <>
+                      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
+                        {teacherOtp.map((digit, i) => (
+                          <Input key={i} id={`teacher-otp-${i}`} value={digit} onChange={(e) => handleTeacherOtpChange(e, i)} maxLength={1} style={{ width: 40, textAlign: "center" }} />
+                        ))}
+                      </div>
+                      <Space>
+                        <Button type="primary" onClick={handleTeacherVerifyOtp} loading={teacherOtpLoading}>Verify</Button>
+                        <Button onClick={handleTeacherResendOtp} loading={teacherResendLoading}>Resend OTP</Button>
+                      </Space>
+                    </>
+                  )}
+                </Col>
               </Row>
             </div>
             <Card size="small" className="teacher-terms-card">
@@ -588,7 +803,7 @@ const MultiRoleRegistration = () => {
                 I have read and agree to the terms and conditions <Text type="danger">*</Text>
               </Checkbox>
             </Form.Item>
-            <Button type="primary" size="large" block icon={loading ? <LoadingOutlined /> : <CheckCircleOutlined />} onClick={onTeacherSubmit} loading={loading} className="teacher-submit-btn">
+            <Button type="primary" size="large" block icon={loading ? <LoadingOutlined /> : <CheckCircleOutlined />} onClick={onTeacherSubmit} loading={loading} disabled={!teacherEmailVerified} className="teacher-submit-btn">
               {loading ? "Registering..." : "Register as Teacher"}
             </Button>
           </Space>
@@ -653,15 +868,12 @@ const MultiRoleRegistration = () => {
         <Spin spinning={loading} size="large">
           <Card className="form-card student-form-card" style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => { setCurrentView("landing"); setStudentStep(1); studentForm.resetFields(); }}>
+              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => { setCurrentView("landing"); setStudentStep(1); studentForm.resetFields(); setStudentEmailVerified(false); setStudentShowOtp(false); setStudentOtp(Array(6).fill("")); }}>
                 Back
               </Button>
               <Text type="secondary">Step {studentStep} of {studentSteps.length}</Text>
             </div>
-            <Title level={3} className="student-theme-color">
-              <UserOutlined className="student-theme-icon" style={{ marginRight: 8 }} />
-              Student Registration
-            </Title>
+            <Title level={3} className="student-theme-color"><UserOutlined className="student-theme-icon" style={{ marginRight: 8 }} />Student Registration</Title>
             <Text type="secondary">Fill the fields in each step. Progress and review page help you verify before final register.</Text>
             <div style={{ marginTop: 20, marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -670,17 +882,13 @@ const MultiRoleRegistration = () => {
               </div>
               <Progress percent={progress} showInfo={false} strokeColor="#3b82f6" />
             </div>
-            <Form form={studentForm} layout="vertical" initialValues={studentData}>
+            <Form form={studentForm} layout="vertical" initialValues={studentData} onValuesChange={(_, allValues) => setStudentData({ ...studentData, ...allValues })}>
               {renderStudentFields()}
             </Form>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
-              <Button icon={<ArrowLeftOutlined />} disabled={studentStep === 1} onClick={() => setStudentStep(studentStep - 1)}>
-                Previous
-              </Button>
+              <Button icon={<ArrowLeftOutlined />} disabled={studentStep === 1} onClick={() => setStudentStep(studentStep - 1)}>Previous</Button>
               {studentStep < studentSteps.length && (
-                <Button type="primary" icon={<ArrowRightOutlined />} onClick={onStudentNext} className="student-next-btn">
-                  Next
-                </Button>
+                <Button type="primary" icon={<ArrowRightOutlined />} onClick={onStudentNext} className="student-next-btn">Next</Button>
               )}
             </div>
           </Card>
@@ -696,15 +904,12 @@ const MultiRoleRegistration = () => {
         <Spin spinning={loading} size="large">
           <Card className="form-card teacher-form-card" style={{ maxWidth: 700, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => { setCurrentView("landing"); setTeacherStep(1); teacherForm.resetFields(); }}>
+              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => { setCurrentView("landing"); setTeacherStep(1); teacherForm.resetFields(); setTeacherEmailVerified(false); setTeacherShowOtp(false); setTeacherOtp(Array(6).fill("")); }}>
                 Back
               </Button>
               <Text type="secondary">Step {teacherStep} of {teacherSteps.length}</Text>
             </div>
-            <Title level={3} className="teacher-theme-color">
-              <TeamOutlined className="teacher-theme-icon" style={{ marginRight: 8 }} />
-              Teacher Registration
-            </Title>
+            <Title level={3} className="teacher-theme-color"><TeamOutlined className="teacher-theme-icon" style={{ marginRight: 8 }} />Teacher Registration</Title>
             <Text type="secondary">Complete each step and review your teaching profile before final register.</Text>
             <div style={{ marginTop: 20, marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -713,17 +918,13 @@ const MultiRoleRegistration = () => {
               </div>
               <Progress percent={progress} showInfo={false} strokeColor="#10b981" />
             </div>
-            <Form form={teacherForm} layout="vertical" initialValues={teacherData}>
+            <Form form={teacherForm} layout="vertical" initialValues={teacherData} onValuesChange={(_, allValues) => setTeacherData({ ...teacherData, ...allValues })}>
               {renderTeacherFields()}
             </Form>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
-              <Button icon={<ArrowLeftOutlined />} disabled={teacherStep === 1} onClick={() => setTeacherStep(teacherStep - 1)}>
-                Previous
-              </Button>
+              <Button icon={<ArrowLeftOutlined />} disabled={teacherStep === 1} onClick={() => setTeacherStep(teacherStep - 1)}>Previous</Button>
               {teacherStep < teacherSteps.length && (
-                <Button type="primary" icon={<ArrowRightOutlined />} onClick={onTeacherNext} className="teacher-next-btn">
-                  Next
-                </Button>
+                <Button type="primary" icon={<ArrowRightOutlined />} onClick={onTeacherNext} className="teacher-next-btn">Next</Button>
               )}
             </div>
           </Card>
@@ -740,7 +941,7 @@ const MultiRoleRegistration = () => {
           <CheckCircleOutlined style={{ fontSize: 64, color: isStudent ? "#3b82f6" : "#10b981", marginBottom: 24 }} />
           <Title level={3}>Registration Successful!</Title>
           <Paragraph>Welcome aboard! Your {isStudent ? "student" : "teacher"} account has been created successfully.</Paragraph>
-          <Button type="primary" size="large" onClick={() => { setCurrentView("landing"); setStudentStep(1); setTeacherStep(1); studentForm.resetFields(); teacherForm.resetFields(); }} className={isStudent ? "student-next-btn" : "teacher-next-btn"}>
+          <Button type="primary" size="large" onClick={() => { setCurrentView("landing"); setStudentStep(1); setTeacherStep(1); studentForm.resetFields(); teacherForm.resetFields(); setStudentEmailVerified(false); setTeacherEmailVerified(false); setStudentShowOtp(false); setTeacherShowOtp(false); setStudentOtp(Array(6).fill("")); setTeacherOtp(Array(6).fill("")); }} className={isStudent ? "student-next-btn" : "teacher-next-btn"}>
             Back to Home
           </Button>
         </Card>

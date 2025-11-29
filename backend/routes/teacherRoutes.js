@@ -4,6 +4,8 @@ const teacherController = require('../controllers/teacherController');
 const { authenticate, authorizeRole } = require('../middleware/auth');
 const { validateTeacherRegistration, validateLogin } = require('../middleware/validation');
 
+router.post('/send-otp', teacherController.sendTeacherOtp);
+router.post('/verify-otp', teacherController.verifyTeacherOtp);
 router.post('/register', validateTeacherRegistration, teacherController.registerTeacher);
 router.post('/login', validateLogin, teacherController.loginTeacher);
 router.get('/profile', authenticate, authorizeRole('teacher'), teacherController.getTeacherProfile);
